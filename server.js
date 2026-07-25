@@ -17,7 +17,7 @@ const { getKnowledgeBase, searchKnowledge, verifySourceFreshness } = require('./
 const { getCustomerHealth, getAccountDetail, triggerHealthIntervention } = require('./lib/customer-health-service');
 const { getForecast, getForecastAlert } = require('./lib/forecast-service');
 const { ROLES, USERS, getUserPermissions, canUser, filterDataByRole, getTeamMembers } = require('./lib/rbac-service');
-const { getBusinessGraph } = require('./lib/business-graph');
+const { getBusinessGraph, getGraphNode, getNodeConnections, getGraphPath, detectGraphImpact, addGraphNode, addGraphEdge, updateGraphNode, getGraphAnalytics, inferGraphConnections } = require('./lib/business-graph');
 const { getMarketplacePlaybooks, installTemplate, getCustomAgents, removeAgent, getApprovalPolicies, updateApprovalPolicy } = require('./lib/agent-studio');
 // NEW SERVICES
 const { getBusinessMemory, addGoal, addApproval, addDecision, addInitiative, updateInitiative } = require('./lib/business-memory');
@@ -36,6 +36,22 @@ const { generatePopAnalysis, generateTrendHistory } = require('./lib/pop-analysi
 const { extractActionsFromChat, extractActionsFromInvestigation, createAction, getAutoActions, updateActionStatus, getActionStats } = require('./lib/auto-actions');
 const { getRiskTemplates, registerRisk, getRiskRegister, updateRiskStatus, getRiskSummary, autoDetectRisks } = require('./lib/risk-register');
 const { generateSLADashboard, trackSLAViolation, getSLAViolations } = require('./lib/sla-service');
+// NEW FEATURES V3.0 — Revenue Intelligence, Smart Notifications, Competitive Intelligence, Sentiment Analysis, Performance Analytics, Risk Playbooks, Meeting Intelligence, NLQ Engine, Code Review, Enhanced Reports
+// V3.1 — Shared Blackboard, Agent Reflection, Agent Graph, Agent Orchestrator
+const { writeToBlackboard, queryBlackboard, getSessionContext, getActiveBlackboardAgents, getTrace, synthesizeBlackboardEntries, getBlackboardStats } = require('./lib/shared-blackboard');
+const { critiqueResponse, refineResponse, conductDebate, conductPoll, getReflectionStats } = require('./lib/agent-reflection');
+const { executeGraph, getGraphState, getGraphExecutionHistory, getGraphExecutionStats } = require('./lib/agent-graph');
+const { routeQuery, orchestrateTask, planWithMCTS, getOrchestratorStatus, getTaskDetails } = require('./lib/agent-orchestrator');
+const { getRevenueDashboard, scoreDeal, predictChurn, forecastRevenue, scoreLead } = require('./lib/revenue-intelligence');
+const { getNotificationChannels, updateChannelConfig, sendNotification, getNotificationHistory, markAsRead, sendDailyBrief } = require('./lib/smart-notifications');
+const { getCompetitiveReport, getCompetitorOverview, getMarketTrends, getCompetitiveAdvantages, getMarketPositioning } = require('./lib/competitive-intelligence');
+const { getSentimentDashboard, analyzeText, getNPSData, getCSATData } = require('./lib/sentiment-analysis');
+const { getTeamAnalytics, getDepartmentOverview, getEmployeeDetail, getProductivityTrends } = require('./lib/performance-analytics');
+const { getPlaybookTemplates, getPlaybookById, triggerPlaybook, advancePlaybookStep, failPlaybookStep, getActivePlaybooks, getPlaybookStats } = require('./lib/risk-playbooks');
+const { getUpcomingMeetings, getRecentMeetings, getMeetingDetail, getMeetingAnalytics, scheduleMeeting, processTranscript } = require('./lib/meeting-intelligence');
+const { executeQuery, getQueryHistory, getSuggestedQueries, classifyQuery } = require('./lib/nlq-engine');
+const { getCodeReviewDashboard, reviewPullRequest, analyzeCode, triggerDeployment } = require('./lib/code-review');
+const { generateReport: generateEnhancedReport, getReportHistory: getEnhancedReportHistory, getReportTemplates, getReportDetail, scheduleReport, exportReport } = require('./lib/report-generator-enhanced');
 
 const ROOT = __dirname; 
 const LANES = new Set(['Needs decision', EXECUTION_LANE, 'Done this week']);
@@ -521,6 +537,319 @@ function createServer({ dbPath = path.join(ROOT, 'data.json') } = {}) {
       // === SLA DASHBOARD ===
       if (request.method === 'GET' && url.pathname === '/api/sla') return sendJson(response, 200, generateSLADashboard(data));
       if (request.method === 'GET' && url.pathname === '/api/sla/violations') return sendJson(response, 200, getSLAViolations(data));
+      
+      // === REVENUE INTELLIGENCE ===
+      if (request.method === 'GET' && url.pathname === '/api/revenue-intelligence') return sendJson(response, 200, getRevenueDashboard(data));
+      if (request.method === 'POST' && url.pathname === '/api/revenue-intelligence/score-deal') {
+        const body = await readJson(request);
+        return sendJson(response, 200, scoreDeal(body));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/revenue-intelligence/predict-churn') {
+        const body = await readJson(request);
+        return sendJson(response, 200, predictChurn(body));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/revenue-intelligence/forecast') {
+        const body = await readJson(request);
+        return sendJson(response, 200, forecastRevenue(body));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/revenue-intelligence/score-lead') {
+        const body = await readJson(request);
+        return sendJson(response, 200, scoreLead(body));
+      }
+      
+      // === SMART NOTIFICATIONS ===
+      if (request.method === 'GET' && url.pathname === '/api/notifications/channels') return sendJson(response, 200, getNotificationChannels());
+      if (request.method === 'POST' && url.pathname === '/api/notifications/channels/update') {
+        const body = await readJson(request);
+        return sendJson(response, 200, updateChannelConfig(body.channelId, body.config));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/notifications/send') {
+        const body = await readJson(request);
+        const result = sendNotification(data, body.channel, body.type, body.payload);
+        store.write(data);
+        return sendJson(response, 200, result);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/notifications/history') return sendJson(response, 200, getNotificationHistory(data));
+      if (request.method === 'POST' && url.pathname === '/api/notifications/read') {
+        const body = await readJson(request);
+        return sendJson(response, 200, markAsRead(data, body.id));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/notifications/daily-brief') {
+        const result = sendDailyBrief(data);
+        store.write(data);
+        return sendJson(response, 200, result);
+      }
+      
+      // === COMPETITIVE INTELLIGENCE ===
+      if (request.method === 'GET' && url.pathname === '/api/competitive') return sendJson(response, 200, getCompetitiveReport());
+      if (request.method === 'GET' && url.pathname === '/api/competitive/overview') return sendJson(response, 200, getCompetitorOverview());
+      if (request.method === 'GET' && url.pathname === '/api/competitive/trends') return sendJson(response, 200, getMarketTrends());
+      if (request.method === 'GET' && url.pathname === '/api/competitive/advantages') return sendJson(response, 200, getCompetitiveAdvantages());
+      if (request.method === 'GET' && url.pathname === '/api/competitive/positioning') return sendJson(response, 200, getMarketPositioning());
+      
+      // === SENTIMENT ANALYSIS ===
+      if (request.method === 'GET' && url.pathname === '/api/sentiment') return sendJson(response, 200, getSentimentDashboard());
+      if (request.method === 'POST' && url.pathname === '/api/sentiment/analyze') {
+        const body = await readJson(request);
+        return sendJson(response, 200, analyzeText(body.text));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/sentiment/nps') return sendJson(response, 200, getNPSData());
+      if (request.method === 'GET' && url.pathname === '/api/sentiment/csat') return sendJson(response, 200, getCSATData());
+      
+      // === PERFORMANCE ANALYTICS ===
+      if (request.method === 'GET' && url.pathname === '/api/performance') return sendJson(response, 200, getTeamAnalytics());
+      if (request.method === 'GET' && url.pathname === '/api/performance/departments') return sendJson(response, 200, getDepartmentOverview());
+      if (request.method === 'GET' && url.pathname.startsWith('/api/performance/employee/')) {
+        const id = url.pathname.split('/').pop();
+        const emp = getEmployeeDetail(id);
+        if (!emp) return sendJson(response, 404, { error: 'Employee not found' });
+        return sendJson(response, 200, emp);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/performance/productivity') return sendJson(response, 200, getProductivityTrends());
+      
+      // === RISK PLAYBOOKS ===
+      if (request.method === 'GET' && url.pathname === '/api/playbooks') return sendJson(response, 200, getPlaybookTemplates());
+      if (request.method === 'GET' && url.pathname === '/api/playbooks/active') return sendJson(response, 200, getActivePlaybooks());
+      if (request.method === 'GET' && url.pathname === '/api/playbooks/stats') return sendJson(response, 200, getPlaybookStats());
+      if (request.method === 'POST' && url.pathname === '/api/playbooks/trigger') {
+        const body = await readJson(request);
+        const result = triggerPlaybook(body.playbookId, body.context, data);
+        if (result.error) return sendJson(response, 404, result);
+        store.write(data);
+        recordAudit(data, { actor: user, action: 'playbook.trigger', resource: result.id, detail: result.name });
+        return sendJson(response, 201, result);
+      }
+      const pbAdvanceMatch = url.pathname.match(/^\/api\/playbooks\/([^/]+)\/advance\/([^/]+)$/);
+      if (request.method === 'POST' && pbAdvanceMatch) {
+        const body = await readJson(request);
+        const result = advancePlaybookStep(pbAdvanceMatch[1], pbAdvanceMatch[2], body.result, data);
+        if (result.error) return sendJson(response, 404, result);
+        store.write(data);
+        return sendJson(response, 200, result);
+      }
+      const pbFailMatch = url.pathname.match(/^\/api\/playbooks\/([^/]+)\/fail\/([^/]+)$/);
+      if (request.method === 'POST' && pbFailMatch) {
+        const body = await readJson(request);
+        const result = failPlaybookStep(pbFailMatch[1], pbFailMatch[2], body.error, data);
+        if (result.error) return sendJson(response, 404, result);
+        store.write(data);
+        return sendJson(response, 200, result);
+      }
+      
+      // === MEETING INTELLIGENCE ===
+      if (request.method === 'GET' && url.pathname === '/api/meetings/upcoming') return sendJson(response, 200, getUpcomingMeetings());
+      if (request.method === 'GET' && url.pathname === '/api/meetings/recent') return sendJson(response, 200, getRecentMeetings());
+      if (request.method === 'GET' && url.pathname === '/api/meetings/analytics') return sendJson(response, 200, getMeetingAnalytics());
+      if (request.method === 'GET' && url.pathname.startsWith('/api/meetings/')) {
+        const id = url.pathname.split('/').pop();
+        const mtg = getMeetingDetail(id);
+        if (!mtg) return sendJson(response, 404, { error: 'Meeting not found' });
+        return sendJson(response, 200, mtg);
+      }
+      if (request.method === 'POST' && url.pathname === '/api/meetings/schedule') {
+        const body = await readJson(request);
+        const mtg = scheduleMeeting(data, body);
+        store.write(data);
+        return sendJson(response, 201, mtg);
+      }
+      if (request.method === 'POST' && url.pathname.startsWith('/api/meetings/')) {
+        const id = url.pathname.split('/').pop();
+        const body = await readJson(request);
+        const result = processTranscript(id, body.transcript);
+        if (result.error) return sendJson(response, 404, result);
+        return sendJson(response, 200, result);
+      }
+      
+      // === NATURAL LANGUAGE QUERY ===
+      if (request.method === 'POST' && url.pathname === '/api/query') {
+        const body = await readJson(request);
+        const result = executeQuery(body.question, data);
+        recordAudit(data, { actor: user, action: 'nlq.query', resource: result.id, detail: body.question.substring(0, 100) });
+        return sendJson(response, 200, result);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/query/history') return sendJson(response, 200, getQueryHistory());
+      if (request.method === 'GET' && url.pathname === '/api/query/suggested') return sendJson(response, 200, getSuggestedQueries());
+      
+      // === AI CODE REVIEW ===
+      if (request.method === 'GET' && url.pathname === '/api/code-review') return sendJson(response, 200, getCodeReviewDashboard());
+      if (request.method === 'POST' && url.pathname === '/api/code-review/review-pr') {
+        const body = await readJson(request);
+        const result = reviewPullRequest(body.prId);
+        if (result.error) return sendJson(response, 404, result);
+        return sendJson(response, 200, result);
+      }
+      if (request.method === 'POST' && url.pathname === '/api/code-review/analyze') {
+        const body = await readJson(request);
+        return sendJson(response, 200, analyzeCode(body.code, body.filename));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/code-review/deploy') {
+        const body = await readJson(request);
+        const result = triggerDeployment(body.repository, body.environment, data);
+        if (result.error) return sendJson(response, 404, result);
+        store.write(data);
+        recordAudit(data, { actor: user, action: 'deployment.trigger', resource: result.id, detail: `${body.repository} -> ${body.environment}` });
+        return sendJson(response, 200, result);
+      }
+      
+      // === ENHANCED REPORTS ===
+      if (request.method === 'GET' && url.pathname === '/api/reports-enhanced') return sendJson(response, 200, getEnhancedReportHistory());
+      if (request.method === 'GET' && url.pathname === '/api/reports-enhanced/templates') return sendJson(response, 200, getReportTemplates());
+      if (request.method === 'POST' && url.pathname === '/api/reports-enhanced/generate') {
+        const body = await readJson(request);
+        const report = generateEnhancedReport(data, body.type, body.context, body.format);
+        recordAudit(data, { actor: user, action: 'report-enhanced.generate', resource: report.id, detail: report.name });
+        return sendJson(response, 201, report);
+      }
+      if (request.method === 'POST' && url.pathname === '/api/reports-enhanced/schedule') {
+        const body = await readJson(request);
+        const result = scheduleReport(data, body);
+        store.write(data);
+        return sendJson(response, 201, result);
+      }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/reports-enhanced/')) {
+        const reportId = url.pathname.split('/').pop();
+        const report = getReportDetail(reportId);
+        if (!report) return sendJson(response, 404, { error: 'Report not found' });
+        return sendJson(response, 200, report);
+      }
+      if (request.method === 'POST' && url.pathname.startsWith('/api/reports-enhanced/export/')) {
+        const format = url.pathname.split('/').pop();
+        const body = await readJson(request);
+        const result = exportReport(body.reportId, format);
+        if (result.error) return sendJson(response, 404, result);
+        return sendJson(response, 200, result);
+      }
+      
+      // === SHARED BLACKBOARD ===
+      if (request.method === 'POST' && url.pathname === '/api/blackboard/write') {
+        const body = await readJson(request);
+        const entry = writeToBlackboard(body.agentId, body.data, body.metadata || {});
+        return sendJson(response, 201, entry);
+      }
+      if (request.method === 'POST' && url.pathname === '/api/blackboard/query') {
+        const body = await readJson(request);
+        return sendJson(response, 200, queryBlackboard(body.query, body.options || {}));
+      }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/blackboard/session/')) {
+        const sessionId = url.pathname.split('/').pop();
+        return sendJson(response, 200, getSessionContext(sessionId));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/blackboard/agents') {
+        return sendJson(response, 200, getActiveBlackboardAgents());
+      }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/blackboard/trace/')) {
+        const entryId = url.pathname.split('/').pop();
+        return sendJson(response, 200, getTrace(entryId));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/blackboard/synthesize') {
+        const body = await readJson(request);
+        return sendJson(response, 200, synthesizeBlackboardEntries(body.entryIds));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/blackboard/stats') {
+        return sendJson(response, 200, getBlackboardStats());
+      }
+      
+      // === AGENT REFLECTION ===
+      if (request.method === 'POST' && url.pathname === '/api/reflection/critique') {
+        const body = await readJson(request);
+        return sendJson(response, 200, critiqueResponse(body.response, body.context || {}));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/reflection/refine') {
+        const body = await readJson(request);
+        return sendJson(response, 200, refineResponse(body.initialResponse, body.context || {}, body.maxIterations || 3));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/reflection/debate') {
+        const body = await readJson(request);
+        return sendJson(response, 200, conductDebate(body.topic, body.context || {}));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/reflection/poll') {
+        const body = await readJson(request);
+        return sendJson(response, 200, conductPoll(body.proposals, body.voterAgents, body.context || {}));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/reflection/stats') {
+        return sendJson(response, 200, getReflectionStats());
+      }
+      
+      // === AGENT GRAPH ===
+      if (request.method === 'POST' && url.pathname === '/api/graph/execute') {
+        const body = await readJson(request);
+        return sendJson(response, 200, executeGraph(body.startNode, body.context || {}));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/graph/state') {
+        return sendJson(response, 200, getGraphState());
+      }
+      if (request.method === 'GET' && url.pathname === '/api/graph/history') {
+        return sendJson(response, 200, getGraphExecutionHistory());
+      }
+      if (request.method === 'GET' && url.pathname === '/api/graph/stats') {
+        return sendJson(response, 200, getGraphExecutionStats());
+      }
+      
+      // === AGENT ORCHESTRATOR ===
+      if (request.method === 'POST' && url.pathname === '/api/orchestrator/route') {
+        const body = await readJson(request);
+        return sendJson(response, 200, routeQuery(body.question, body.context || {}));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/orchestrator/task') {
+        const body = await readJson(request);
+        const result = orchestrateTask(body.task, body.data || {});
+        return sendJson(response, 201, result);
+      }
+      if (request.method === 'POST' && url.pathname === '/api/orchestrator/plan') {
+        const body = await readJson(request);
+        return sendJson(response, 200, planWithMCTS(body.goal, body.context || {}, body.iterations || 50));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/orchestrator/status') {
+        return sendJson(response, 200, getOrchestratorStatus());
+      }
+      
+      // === BUSINESS GRAPH V3 (расширенные эндпоинты) ===
+      if (request.method === 'GET' && url.pathname.startsWith('/api/business-graph/node/')) {
+        const nodeId = url.pathname.split('/').pop();
+        const node = getGraphNode(nodeId);
+        if (!node) return sendJson(response, 404, { error: 'Node not found' });
+        return sendJson(response, 200, node);
+      }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/business-graph/connections/')) {
+        const nodeId = url.pathname.split('/').pop();
+        return sendJson(response, 200, getNodeConnections(nodeId));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/business-graph/path') {
+        const source = url.searchParams.get('source');
+        const target = url.searchParams.get('target');
+        const depth = parseInt(url.searchParams.get('depth')) || 5;
+        if (!source || !target) return sendJson(response, 400, { error: 'source and target required' });
+        return sendJson(response, 200, getGraphPath(source, target, depth));
+      }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/business-graph/impact/')) {
+        const nodeId = url.pathname.split('/').pop();
+        return sendJson(response, 200, detectGraphImpact(nodeId));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/business-graph/node') {
+        const body = await readJson(request);
+        const node = addGraphNode(body);
+        return sendJson(response, 201, node);
+      }
+      if (request.method === 'POST' && url.pathname === '/api/business-graph/edge') {
+        const body = await readJson(request);
+        const edge = addGraphEdge(body.source, body.target, body);
+        if (!edge) return sendJson(response, 400, { error: 'Invalid source or target' });
+        return sendJson(response, 201, edge);
+      }
+      if (request.method === 'PATCH' && url.pathname.startsWith('/api/business-graph/node/')) {
+        const nodeId = url.pathname.split('/').pop();
+        const body = await readJson(request);
+        const result = updateGraphNode(nodeId, body);
+        if (!result) return sendJson(response, 404, { error: 'Node not found' });
+        return sendJson(response, 200, result);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/business-graph/analytics') {
+        return sendJson(response, 200, getGraphAnalytics());
+      }
+      if (request.method === 'POST' && url.pathname === '/api/business-graph/infer') {
+        const newEdges = inferGraphConnections();
+        return sendJson(response, 200, { inferred: newEdges.length, edges: newEdges });
+      }
       
       // === HEALTH CHECK ===
       if (request.method === 'GET' && url.pathname === '/api/health') {
