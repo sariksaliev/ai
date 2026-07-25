@@ -1,0 +1,232 @@
+{
+  "workspace": {
+    "name": "Нимбус Лабс",
+    "period": "Q3 · Неделя 4",
+    "user": "Сам Азизов"
+  },
+  "users": [
+    {
+      "id": "usr_sam",
+      "name": "Сам Азизов",
+      "email": "sam@nimbus.demo",
+      "role": "admin",
+      "passwordSalt": "axiom-demo-salt-v1",
+      "passwordHash": "72dc3d80afde27d57d6ed89d6d68e8efeb0bb74babe1ddc42fbea8e7fec890a9536c524a233f5d76766bea6c3855848a17afc2349ce85e49015d4a8c9abd6dbb"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "c0e3a38e2a79042ad1430bee67c8e95e144b9c8b788c54e3ddcfac7577c471ce",
+      "userId": "usr_sam",
+      "expiresAt": "2026-08-01T04:04:40.406Z"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "status": "disconnected",
+      "scopes": [
+        "crm.objects.deals.read",
+        "crm.objects.contacts.read"
+      ],
+      "lastSync": null
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "status": "disconnected",
+      "scopes": [
+        "channels:history",
+        "chat:write"
+      ],
+      "lastSync": null
+    }
+  ],
+  "audit": [
+    {
+      "id": "audit_1784952280406_376e45",
+      "at": "2026-07-25T04:04:40.407Z",
+      "actor": {
+        "id": "usr_sam",
+        "name": "Сам Азизов",
+        "role": "admin"
+      },
+      "action": "auth.login",
+      "resource": "session",
+      "detail": "Signed in to Axiom OS",
+      "category": "authentication",
+      "severity": "low"
+    }
+  ],
+  "workflows": [],
+  "notifications": [
+    {
+      "id": "notice-1",
+      "kind": "risk",
+      "title": "Обнаружен риск EU pipeline",
+      "detail": "Потенциальное влияние: $42–71k в этом квартале.",
+      "read": false,
+      "createdAt": "2026-07-22T08:00:00.000Z"
+    }
+  ],
+  "metrics": [
+    {
+      "label": "МЕСЯЧНАЯ ВЫРУЧКА",
+      "value": "$842,120",
+      "change": "↗ 8.2%",
+      "tone": "up"
+    },
+    {
+      "label": "ПОКРЫТИЕ ВОРОНКИ",
+      "value": "2.7×",
+      "change": "↘ 12.4%",
+      "tone": "down"
+    },
+    {
+      "label": "УДЕРЖАНИЕ ВЫРУЧКИ",
+      "value": "112.6%",
+      "change": "↗ 1.8%",
+      "tone": "up"
+    },
+    {
+      "label": "ДЕНЕЖНЫЙ RUNWAY",
+      "value": "18.4 мес",
+      "change": "стабильно",
+      "tone": "neutral"
+    }
+  ],
+  "agents": [
+    {
+      "id": "sales",
+      "name": "Торговый агент",
+      "letter": "S",
+      "outcome": "Исполнение выручки",
+      "state": "active",
+      "task": "Проверка 24 сделок в зоне риска",
+      "autonomy": "Создание и утверждение",
+      "sources": [
+        "HubSpot",
+        "Gmail",
+        "Calendar"
+      ]
+    },
+    {
+      "id": "marketing",
+      "name": "Маркетинг-агент",
+      "letter": "M",
+      "outcome": "Эффективность спроса",
+      "state": "active",
+      "task": "Анализ EU кампаний",
+      "autonomy": "Рекомендации",
+      "sources": [
+        "Google Ads",
+        "GA4",
+        "HubSpot"
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "Финансовый агент",
+      "letter": "F",
+      "outcome": "Деньги и маржа",
+      "state": "active",
+      "task": "Подготовка cash forecast",
+      "autonomy": "Только чтение",
+      "sources": [
+        "Stripe",
+        "QuickBooks"
+      ]
+    },
+    {
+      "id": "operations",
+      "name": "Операционный агент",
+      "letter": "O",
+      "outcome": "Скорость исполнения",
+      "state": "active",
+      "task": "Работа с 3 блокерами",
+      "autonomy": "Создание задач",
+      "sources": [
+        "Linear",
+        "Slack",
+        "Notion"
+      ]
+    },
+    {
+      "id": "customer",
+      "name": "Клиентский агент",
+      "letter": "C",
+      "outcome": "Удержание и расширение",
+      "state": "idle",
+      "task": "Мониторинг 87 аккаунтов",
+      "autonomy": "Создание и утверждение",
+      "sources": [
+        "Intercom",
+        "Stripe",
+        "HubSpot"
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Агент знаний",
+      "letter": "K",
+      "outcome": "Память компании",
+      "state": "active",
+      "task": "Обновление 14 источников",
+      "autonomy": "Индексация и поиск",
+      "sources": [
+        "Drive",
+        "Notion",
+        "Slack"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-1",
+      "lane": "Требует решения",
+      "domain": "Выручка",
+      "title": "Утвердить план восстановления EU pipeline",
+      "owner": "CEO",
+      "due": "Сегодня",
+      "status": "awaiting_approval"
+    },
+    {
+      "id": "t-2",
+      "lane": "Требует решения",
+      "domain": "Финансы",
+      "title": "Перераспределить $8k с неэффективной кампании",
+      "owner": "CMO",
+      "due": "Завтра",
+      "status": "awaiting_approval"
+    },
+    {
+      "id": "t-3",
+      "lane": "В работе",
+      "domain": "Продажи",
+      "title": "Добавить шаги к 3 enterprise сделкам",
+      "owner": "Торговый агент",
+      "due": "Сегодня",
+      "status": "active"
+    },
+    {
+      "id": "t-4",
+      "lane": "В работе",
+      "domain": "Операции",
+      "title": "Решить блокер security review",
+      "owner": "Мая",
+      "due": "Сегодня",
+      "status": "active"
+    },
+    {
+      "id": "t-5",
+      "lane": "Сделано",
+      "domain": "Клиенты",
+      "title": "Подготовить Acme expansion brief",
+      "owner": "Клиентский агент",
+      "due": "Готово",
+      "status": "done"
+    }
+  ],
+  "investigations": []
+}

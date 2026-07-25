@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Axiom — Бизнес-ОС</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <a class="brand" href="#"><span class="brand-mark">A</span><span>axiom</span></a>
+        <div class="workspace"><span class="avatar">N</span><span>Нимбус Лабс</span><span class="chev">⌄</span></div>
+        <nav>
+          <p class="nav-label">ОПЕРАЦИОННАЯ СИСТЕМА</p>
+          <button class="nav-item active" data-view="overview"><span>⌘</span> Обзор</button>
+          <button class="nav-item" data-view="ask"><span>✦</span> Спросить Axiom</button>
+          <button class="nav-item" data-view="agents"><span>◌</span> ИИ-Команда <i id="agentCount">6</i></button>
+          <button class="nav-item" data-view="execution"><span>✓</span> Исполнение <i id="taskCount">6</i></button>
+          <button class="nav-item" data-view="roi"><span>$</span> ROI</button>
+          <p class="nav-label second">АНАЛИТИКА</p>
+          <button class="nav-item" data-view="forecast"><span>◒</span> Прогнозы</button>
+          <button class="nav-item" data-view="customer-health"><span>♡</span> Клиенты</button>
+          <button class="nav-item" data-view="graph"><span>⌘</span> Граф</button>
+          <button class="nav-item" data-view="scenarios"><span>🔮</span> Сценарии</button>
+          <p class="nav-label second">РАБОЧЕЕ ПРОСТРАНСТВО</p>
+          <button class="nav-item" data-view="marketplace"><span>⊞</span> Маркетплейс</button>
+          <button class="nav-item" data-view="knowledge"><span>◇</span> База знаний</button>
+          <button class="nav-item" data-view="integrations"><span>⊞</span> Интеграции</button>
+          <button class="nav-item" data-view="policies"><span>⚙</span> Политики</button>
+          <button class="nav-item" data-view="users"><span>👥</span> Команда</button>
+          <button class="nav-item" data-view="audit"><span>◷</span> Аудит</button>
+          <p class="nav-label second">V2.1</p>
+          <button class="nav-item" data-view="okrs"><span>🎯</span> OKR</button>
+          <button class="nav-item" data-view="charts"><span>📈</span> Графики</button>
+          <button class="nav-item" data-view="decisions"><span>📋</span> Решения</button>
+          <button class="nav-item" data-view="pop"><span>📊</span> Сравнение</button>
+          <button class="nav-item" data-view="actions"><span>⚡</span> Действия</button>
+          <button class="nav-item" data-view="risks"><span>🚨</span> Риски</button>
+          <button class="nav-item" data-view="sla"><span>⏱</span> SLA</button>
+        </nav>
+        <div class="sidebar-foot">
+          <div class="signal"><span class="pulse-dot"></span><div><b>Система здорова</b><small>14 источников синхронизировано</small></div></div>
+          <button class="profile"><span class="avatar green">SA</span><span><b>Сам Азизов</b><small>CEO · Нимбус</small></span><span>•••</span></button>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div class="crumb"><span>Вторник, 22 июля</span><span class="divider"></span><b>Q3 · Неделя 4</b></div>
+          <div class="top-actions">
+            <button class="icon-button" onclick="showMorningBrief()" title="Morning Brief">📋</button>
+            <button class="icon-button" onclick="showHelp()" title="Помощь">?</button>
+            <div class="notification-wrap"><button class="icon-button notification" onclick="toggleNotifications(event)">♧<i class="notification-badge">0</i></button><div class="notification-popover hidden" id="notificationPopover"><div class="popover-header"><b>Уведомления</b></div><div class="popover-list" id="notificationList"><p style="padding:20px;text-align:center;color:#84908a;font-size:11px">Загрузка…</p></div></div></div>
+            <button class="command-button" id="openAsk">✦ <span>Спросить о бизнесе</span><kbd>⌘K</kbd></button>
+          </div>
+        </header>
+
+        <!-- ОБЗОР -->
+        <section id="overview" class="view active-view"></section>
+
+        <!-- СПРОСИТЬ AXIOM -->
+        <section id="ask" class="view">
+          <div class="page-title"><p class="eyebrow">ИИ-ИНТЕЛЛЕКТ</p><h1>Спросите свой бизнес.</h1><p>Ответы на основе живых данных компании с планом действий.</p></div>
+          <div class="ask-card"><div class="ask-input"><span>✦</span><textarea id="question" placeholder="Почему упали продажи в Европе?"></textarea><button class="primary" id="runQuestion">Расследовать <span>→</span></button></div><div class="suggestions"><span>Попробуйте спросить:</span><button>Что угрожает нашему плану Q3?</button><button>Какие клиенты могут уйти?</button><button>Где мы тратим деньги впустую?</button></div></div>
+          <div class="empty-state" id="askEmpty"><div class="big-star">✦</div><h2>Начните с бизнес-вопроса</h2><p>Axiom соберёт нужную команду, данные и предложит действия.</p></div>
+          <div class="investigation-result hidden" id="askResult"></div>
+        </section>
+
+        <!-- ИИ-КОМАНДА -->
+        <section id="agents" class="view"><div class="page-title split"><div><p class="eyebrow">ВАША ИИ-КОМАНДА</p><h1>Знакомьтесь, команда.</h1><p>Каждый агент отвечает за измеримый бизнес-результат.</p></div><button class="primary" data-go="marketplace">Из Маркетплейса <span>+</span></button></div><div class="agent-grid" id="agentGrid"></div></section>
+
+        <!-- ИСПОЛНЕНИЕ -->
+        <section id="execution" class="view"><div class="page-title split"><div><p class="eyebrow">СИСТЕМА ИСПОЛНЕНИЯ</p><h1>От решения к результату.</h1><p>Работа привязана к бизнес-целям, а не к дедлайнам.</p></div><div class="exec-tabs"><button class="exec-tab active" data-exec-tab="board">Доска</button><button class="exec-tab" data-exec-tab="workflows">Процессы</button></div></div><div id="execBoard" class="exec-panel active-panel"><div class="board" id="board"></div></div><div id="execWorkflows" class="exec-panel"><h3 style="font-size:13px;margin:0 0 12px;color:#66736e">Активные процессы восстановления</h3><div class="workflow-list" id="workflowList"></div></div></section>
+
+        <!-- ROI ДАШБОРД -->
+        <section id="roi" class="view"><div class="page-title"><p class="eyebrow">ROI ДАШБОРД</p><h1>Ценность для бизнеса.</h1><p>Реальный эффект от ИИ-решений и автоматизированных процессов.</p></div><div id="roiContent"></div></section>
+
+        <!-- ПРОГНОЗЫ -->
+        <section id="forecast" class="view"><div class="page-title split"><div><p class="eyebrow">ПРОГНОЗИРОВАНИЕ</p><h1>Прогноз выручки и воронки.</h1><p>ИИ-прогнозы с оценкой рисков.</p></div><div id="forecastAlert"></div></div><div id="forecastContent"></div></section>
+
+        <!-- ЗДОРОВЬЕ КЛИЕНТОВ -->
+        <section id="customer-health" class="view"><div class="page-title"><p class="eyebrow">ЗДОРОВЬЕ КЛИЕНТОВ</p><h1>Состояние аккаунтов и риск оттока.</h1><p>Единый взгляд на использование, тональность, NPS и продления.</p></div><div id="customerHealthContent"></div></section>
+
+        <!-- БИЗНЕС ГРАФ -->
+        <section id="graph" class="view"><div class="page-title"><p class="eyebrow">ЖИВАЯ МОДЕЛЬ КОМПАНИИ</p><h1>Бизнес-Граф</h1><p>Поймите взаимосвязи между метриками, клиентами и решениями.</p></div><div class="graph-card"><div class="graph-toolbar"><span class="live"><i></i> В реальном времени</span><button>По выручке⌄</button><button>90 дней⌄</button></div><div class="graph-canvas"><svg viewBox="0 0 900 440" preserveAspectRatio="none"><path d="M135 224 C250 224 255 119 390 119 S515 203 610 202"/><path d="M135 224 C270 224 285 342 435 342 S520 236 610 202"/><path d="M610 202 C700 202 690 117 790 117"/><path d="M610 202 C705 202 710 318 800 318"/></svg><div class="node main-node" style="left:8%;top:43%"><b>$842k</b><span>Ежемесячная выручка</span></div><div class="node" style="left:39%;top:17%"><b>4,218</b><span>SQL</span></div><div class="node" style="left:44%;top:69%"><b>$203k</b><span>Рекламный бюджет</span></div><div class="node violet" style="left:67%;top:38%"><b>312</b><span>Сделки</span></div><div class="node green-node" style="left:85%;top:16%"><b>87</b><span>Выигранные</span></div><div class="node coral-node" style="left:86%;top:66%"><b>24</b><span>В зоне риска</span></div></div><div class="graph-note"><span>✦</span><p><b>Инсайт ИИ:</b> Сильнейший негативный путь на этой неделе — <em>Google Ads → SQL → EU сделки.</em></p><button id="openInvestigation2">Расследовать</button></div></div><div id="graphInsights"></div></section>
+
+        <!-- СЦЕНАРИИ -->
+        <section id="scenarios" class="view"><div id="scenarioContent"></div></section>
+
+        <!-- МАРКЕТПЛЕЙС -->
+        <section id="marketplace" class="view"><div class="page-title"><p class="eyebrow">МАРКЕТПЛЕЙС АГЕНТОВ</p><h1>Расширьте ИИ-команду.</h1><p>Установите готовые сценарии для вашего бизнеса.</p></div><div id="marketplaceGrid"></div></section>
+
+        <!-- БАЗА ЗНАНИЙ -->
+        <section id="knowledge" class="view simple-view"><p class="eyebrow">ПАМЯТЬ КОМПАНИИ</p><h1>Знания, которые всегда актуальны.</h1><p>Поиск по 4,812 проверенным источникам</p><div class="search-knowledge" id="knowledgeSearch"><span>⌕ </span><input type="text" id="knowledgeQuery" placeholder="Поиск в базе знаний..." /><button class="primary" id="runKnowledgeSearch">Поиск</button></div><div id="knowledgeResults"></div></section>
+
+        <!-- ИНТЕГРАЦИИ -->
+        <section id="integrations" class="view simple-view"><p class="eyebrow">ПОДКЛЮЧЁННЫЕ СИСТЕМЫ</p><h1>Ваш бизнес, объединённый.</h1><p>Только предоставленные права доступа доступны ИИ-агентам.</p><div class="integration-grid" id="integrationGrid"></div></section>
+
+        <!-- ПОЛИТИКИ -->
+        <section id="policies" class="view"><div class="page-title"><p class="eyebrow">ПОЛИТИКИ СОГЛАСОВАНИЯ</p><h1>Управление и контроль.</h1><p>Определите, что ИИ может делать самостоятельно, а что требует одобрения.</p></div><div id="policiesList"></div></section>
+
+        <!-- КОМАНДА -->
+        <section id="users" class="view"><div class="page-title"><p class="eyebrow">КОМАНДА</p><h1>Ваша рабочая группа.</h1><p>Ролевой доступ для корпоративной безопасности.</p></div><div id="usersList"></div></section>
+
+        <!-- АУДИТ -->
+        <section id="audit" class="view simple-view"><p class="eyebrow">АУДИТ</p><h1>Каждое решение отслеживается.</h1><p>Действия агентов, одобрения и подключения систем остаются видимыми.</p><div class="audit-list" id="auditList"></div></section>
+        
+        <!-- OKR TRACKER V2.1 -->
+        <section id="okrs" class="view"><div class="page-title split"><div><p class="eyebrow">OKR ТРЕКЕР</p><h1>Цели и Key Results.</h1><p>Свяжите исполнение с результатами компании.</p></div><div style="display:flex;gap:6px"><button class="primary" id="showOkrTemplates">+ Из шаблона</button><button class="primary" id="showAiGoals">🤖 AI-цели</button></div></div><div id="okrContent"></div></section>
+        
+        <!-- CHARTS V2.1 -->
+        <section id="charts" class="view"><div class="page-title"><p class="eyebrow">ГРАФИКИ И ТРЕНДЫ</p><h1>Визуализация метрик.</h1><p>Тренды, распределения и сравнения в реальном времени.</p></div><div id="chartsContent"></div></section>
+        
+        <!-- DECISION REGISTRY V2.1 -->
+        <section id="decisions" class="view"><div class="page-title"><p class="eyebrow">РЕЕСТР РЕШЕНИЙ</p><h1>Все бизнес-решения.</h1><p>Централизованный учёт одобрений с отслеживанием исполнения.</p></div><div id="decisionsContent"></div></section>
+        
+        <!-- PERIOD OVER PERIOD V2.1 -->
+        <section id="pop" class="view"><div class="page-title"><p class="eyebrow">СРАВНИТЕЛЬНЫЙ АНАЛИЗ</p><h1>Период к периоду.</h1><p>Сравнение метрик WoW, MoM, QoQ с трендами и инсайтами.</p></div><div id="popContent"></div></section>
+        
+        <!-- AUTO ACTIONS V2.2 -->
+        <section id="actions" class="view"><div class="page-title"><p class="eyebrow">АВТОМАТИЧЕСКИЕ ДЕЙСТВИЯ</p><h1>AI-инициированные задачи.</h1><p>Действия, созданные из чата, расследований и решений CEO.</p></div><div id="actionsContent"></div></section>
+        
+        <!-- RISK REGISTER V2.2 -->
+        <section id="risks" class="view"><div class="page-title"><p class="eyebrow">РЕЕСТР РИСКОВ</p><h1>Управление рисками.</h1><p>Централизованный реестр с severity, probability, mitigation и owner'ами.</p></div><div id="risksContent"></div></section>
+        
+        <!-- SLA DASHBOARD V2.2 -->
+        <section id="sla" class="view"><div class="page-title"><p class="eyebrow">SLA ДАШБОРД</p><h1>Service Level Agreements.</h1><p>Отслеживание метрик, нарушений и эскалаций.</p></div><div id="slaContent"></div></section>
+      </main>
+    </div>
+    <div class="modal hidden" id="modal"><div class="modal-box"><button class="close" id="closeModal">×</button><div id="modalContent"></div></div></div>
+    <div class="login-gate hidden" id="loginGate"><form class="login-card" id="loginForm"><span class="brand-mark">A</span><p class="eyebrow">AXIOM OS</p><h2>С возвращением.</h2><p>Войдите в рабочее пространство компании.</p><label>Эл. почта<input id="loginEmail" type="email" value="sam@nimbus.demo" required /></label><label>Пароль<input id="loginPassword" type="password" value="axiom-demo" required /></label><p class="login-error hidden" id="loginError"></p><button class="primary" type="submit">Войти <span>→</span></button><small>Демо-аккаунт предзаполнен для MVP.</small></form></div>
+    <script src="app.js"></script>
+  </body>
+</html>
