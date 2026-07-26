@@ -8,3 +8,24 @@ test('integrations, sync and audit records are persisted', async () => { const o
 test('value summary and notifications are available', async () => { const value = await (await fetch(`${baseUrl}/api/value`, { headers })).json(); assert.equal(value.atRiskRevenueIdentified, 71000); assert.ok(value.activeWorkflows >= 1); const notifications = await (await fetch(`${baseUrl}/api/notifications`, { headers })).json(); assert.ok(notifications.some((item) => item.kind === 'workflow')); });
 test('invalid requests return safe errors', async () => { const invalidJson = await fetch(`${baseUrl}/api/investigations`, { method: 'POST', headers, body: '{broken' }); assert.equal(invalidJson.status, 400); const invalidMove = await fetch(`${baseUrl}/api/tasks/nope/move`, { method: 'POST', headers, body: JSON.stringify({ lane: 'Anything' }) }); assert.equal(invalidMove.status, 400); });
 test('private files cannot be served as static assets', async () => { const dataFile = await fetch(`${baseUrl}/data.json`); const sourceFile = await fetch(`${baseUrl}/server.js`); assert.equal(dataFile.status, 404); assert.equal(sourceFile.status, 404); });
+test('agent chat awaits async response and routes by agentId', async () => {
+  const response = await fetch(`${baseUrl}/api/chat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ text: 'Какой статус pipeline?', agentId: 'sales' })
+  });
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.ok(result.id, 'chat result must resolve to an object with id (not a Promise serialized as {})');
+  assert.equal(result.agentId, 'sales');
+  assert.ok(result.response?.analysis);
+  const knowledge = await fetch(`${baseUrl}/api/chat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ text: 'Что мы знаем про EU?', agentId: 'knowledge' })
+  });
+  const knowledgeResult = await knowledge.json();
+  assert.equal(knowledge.status, 200);
+  assert.equal(knowledgeResult.agentId, 'knowledge');
+  assert.ok(knowledgeResult.response?.analysis);
+});

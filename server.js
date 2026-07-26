@@ -114,7 +114,7 @@ function createServer({ dbPath = path.join(ROOT, 'data.json') } = {}) {
       // === EXECUTIVE CHAT ===
       if (request.method === 'POST' && url.pathname === '/api/chat') {
         const body = await readJson(request);
-        const result = processChatMessage(data, body);
+        const result = await processChatMessage(data, body);
         saveChatMessage(data, result);
         recordAudit(data, { actor: user, action: 'chat.message', resource: result.id, detail: body.text?.substring(0, 100) || 'Chat message' });
         store.write(data);
@@ -250,9 +250,18 @@ function createServer({ dbPath = path.join(ROOT, 'data.json') } = {}) {
       if (request.method === 'POST' && url.pathname === '/api/investigations') { 
         const body = await readJson(request);
         // Use new chat engine for enriched investigations
-        const chatResult = processChatMessage(data, { text: body.question || 'Business analysis' });
+        const chatResult = await processChatMessage(data, { text: body.question || 'Business analysis' });
         // Find the full investigation from data (chatResult.response.investigation only has id/evidence/plan)
         const investigation = data.investigations[0];
+        if (!investigation) {
+          // Fallback: create investigation directly via llm-service
+          const { createInvestigation } = require('./lib/llm-service');
+          const inv = await createInvestigation(body.question || 'Business analysis');
+          data.investigations.unshift(inv);
+          store.write(data);
+          recordAudit(data, { actor: user, action: 'agent.investigation.start', resource: inv.id, detail: inv.question });
+          return sendJson(response, 201, inv);
+        }
         // Ensure backward compatibility
         if (!investigation.question) investigation.question = body.question;
         store.write(data); 

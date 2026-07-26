@@ -494,12 +494,192 @@ function renderWorkflows(items){
   list.innerHTML=items.length?items.map(w=>`<article class="wf-card" style="animation:rise .3s ease"><header><b>${w.title}</b><span class="wf-status wf-${w.status}">${w.status=='in_progress'?'В работе':w.status=='done'?'Готово':'Ожидание'}</span></header><p>Влияние: ${w.targetImpact} · ${w.steps.filter(s=>s.status==='done').length}/${w.steps.length} шагов · ${w.sla?'SLA: '+w.sla:''}</p><div class="wf-steps">${w.steps.map(s=>`<div class="wf-step wf-step-${s.status}"><span class="step-indicator">${s.status==='active'?'→':s.status==='queued'?'○':s.status==='escalated'?'!':'✓'}</span><div><b>${s.title}</b><small>${s.owner} · ${s.due}${s.approvalRequired?' · ⚠️ Нужно одобрение':''}${s.retries>0?' · 🔄 Попытка '+(s.retries+1)+'/'+s.maxRetries:''}</small></div></div>`).join('')}</div>${w.escalations&&w.escalations.length?`<div class="wf-escalations">${w.escalations.map(e=>`<p class="wf-escalation">🚨 Эскалация ${e.contact}: ${e.reason}</p>`).join('')}</div>`:''}</article>`).join(''):'<p class="hero-sub" style="padding:40px;text-align:center">Нет активных процессов. Утвердите расследование, чтобы запустить.</p>';
 }
 
+const agentChats = {};
+
+const AGENT_SUGGESTIONS = {
+  sales: ['Какой статус pipeline?', 'Какие сделки застряли?', 'Сколько лидов пропустили SLA?'],
+  marketing: ['Что с ROAS кампаний?', 'Куда перераспределить бюджет?', 'Какая аудитория просела?'],
+  finance: ['Какой runway?', 'Сколько выручки под риском?', 'Что с маржой в EU?'],
+  customer: ['Какие клиенты под риском?', 'Где упал NPS?', 'Какой upsell потенциал?'],
+  operations: ['Какие операции заблокированы?', 'Как выполняется SLA?', 'Где bottleneck?'],
+  knowledge: ['Что мы знаем про EU pipeline?', 'Какие выводы из прошлых расследований?', 'Насколько свежи источники?']
+};
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function openAgentModal(agentId){
   const a=agents.find(x=>x[1].toLowerCase().replace(/\s/g,'-')===agentId);
   if(!a)return;
+  const agentIdMap = {
+    'S':'sales','M':'marketing','F':'finance','C':'customer','O':'operations','K':'knowledge'
+  };
+  const backendId = agentIdMap[a[0]] || a[0].toLowerCase();
+  if (!agentChats[backendId]) agentChats[backendId] = [];
+  const suggestions = AGENT_SUGGESTIONS[backendId] || AGENT_SUGGESTIONS.sales;
+  
   const modal=document.getElementById('modal');
-  document.getElementById('modalContent').innerHTML=`<p class="eyebrow">ПРОФИЛЬ АГЕНТА</p><div class="agent-modal-header"><span class="agent-orb ${a[8]}" style="width:44px;height:44px;font-size:18px">${a[0]}</span><div><h2>${a[1]}</h2><small>${a[2]}</small></div><span class="working">● АКТИВЕН</span></div><p style="color:#71807a;font-size:12px;line-height:1.6">${a[3]}</p><div class="agent-modal-stats"><div><b>${a[4]}</b><small>${a[5]}</small></div><div><b>${a[6]}</b><small>${a[7]}</small></div></div>`;
+  document.getElementById('modalContent').innerHTML=`
+    <div class="agent-chat-modal">
+      <div class="agent-chat-header">
+        <div class="agent-chat-info">
+          <span class="agent-orb ${a[8]}" style="width:40px;height:40px;font-size:16px">${a[0]}</span>
+          <div>
+            <h2 style="margin:0;font-size:16px">${escapeHtml(a[1])}</h2>
+            <small style="color:#71807a;font-size:11px">${escapeHtml(a[2])} · ${escapeHtml(a[4])} ${escapeHtml(a[5])}</small>
+          </div>
+        </div>
+        <span class="working">● АКТИВЕН</span>
+      </div>
+      <p style="color:#71807a;font-size:11px;margin:8px 0 12px;line-height:1.5">${escapeHtml(a[3])}</p>
+      <div class="agent-chat-messages" id="agentChatMessages_${backendId}"></div>
+      <div class="agent-chat-input">
+        <input type="text" id="agentChatInput_${backendId}" placeholder="Спросить ${escapeHtml(a[1])}..." autocomplete="off" />
+        <button id="agentChatSend_${backendId}" class="primary" style="padding:8px 16px">→</button>
+      </div>
+      <div class="agent-chat-suggestions">
+        ${suggestions.map(s => 
+          `<button type="button" class="agent-chat-suggestion" data-q="${escapeHtml(s)}">${escapeHtml(s)}</button>`
+        ).join('')}
+      </div>
+    </div>`;
   modal.classList.remove('hidden');
+  renderAgentChat(backendId, a);
+  
+  const input = document.getElementById(`agentChatInput_${backendId}`);
+  const sendBtn = document.getElementById(`agentChatSend_${backendId}`);
+  
+  async function sendAgentMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.disabled = true;
+    sendBtn.disabled = true;
+    
+    agentChats[backendId].push({ role: 'user', text, time: new Date().toLocaleTimeString() });
+    renderAgentChat(backendId, a);
+    
+    const msgs = document.getElementById(`agentChatMessages_${backendId}`);
+    const typing = document.createElement('div');
+    typing.className = 'agent-chat-msg agent-msg';
+    typing.id = 'typingIndicator';
+    typing.innerHTML = `<span class="agent-orb mini ${a[8]}" style="width:22px;height:22px;font-size:10px;flex-shrink:0">${a[0]}</span><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>`;
+    msgs.appendChild(typing);
+    msgs.scrollTop = msgs.scrollHeight;
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, agentId: backendId })
+      });
+      const result = await response.json();
+      document.getElementById('typingIndicator')?.remove();
+      
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Chat request failed');
+      }
+      
+      if (result.response) {
+        const agentMsg = result.response.analysis || result.response.summary || 'Анализ выполнен';
+        agentChats[backendId].push({ 
+          role: 'agent', 
+          text: agentMsg, 
+          time: new Date().toLocaleTimeString(),
+          _findings: result.response.findings || null,
+          _recommendations: result.response.recommendations || null,
+          findings: null,
+          recommendations: null,
+          streaming: true
+        });
+        renderAgentChat(backendId, a);
+      }
+    } catch(e) {
+      document.getElementById('typingIndicator')?.remove();
+      agentChats[backendId].push({ role: 'agent', text: 'Извините, произошла ошибка. Попробуйте ещё раз.', time: new Date().toLocaleTimeString() });
+      renderAgentChat(backendId, a);
+    } finally {
+      input.disabled = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+  
+  sendBtn.onclick = sendAgentMessage;
+  input.onkeydown = (e) => { if (e.key === 'Enter') sendAgentMessage(); };
+  modal.querySelectorAll('.agent-chat-suggestion').forEach(btn => {
+    btn.onclick = () => {
+      input.value = btn.dataset.q;
+      sendAgentMessage();
+    };
+  });
+  setTimeout(() => input.focus(), 50);
+}
+
+function renderAgentChat(backendId, a) {
+  const msgs = document.getElementById('agentChatMessages_' + backendId);
+  if (!msgs) return;
+  const history = agentChats[backendId] || [];
+  if (history.length === 0) {
+    msgs.innerHTML = `<div class="agent-chat-welcome">Задайте вопрос ${escapeHtml(a[1].toLowerCase())}. Например: «${escapeHtml((AGENT_SUGGESTIONS[backendId] || AGENT_SUGGESTIONS.sales)[0])}»</div>`;
+    return;
+  }
+  msgs.innerHTML = history.map(m => `
+    <div class="agent-chat-msg ${m.role === 'user' ? 'user-msg' : 'agent-msg'}">
+      ${m.role === 'agent' ? `<span class="agent-orb mini ${a[8]}" style="width:22px;height:22px;font-size:10px;flex-shrink:0">${a[0]}</span>` : ''}
+      <div class="chat-bubble">
+        <div class="chat-text ${m.streaming ? 'streaming-text' : ''}">${m.streaming ? '' : escapeHtml(m.text || '')}</div>
+        <div class="chat-time">${escapeHtml(m.time)}</div>
+        ${m.findings ? `<div class="chat-findings">
+          <div class="chat-confidence">Уверенность: ${(m.findings.confidence * 100).toFixed(0)}%</div>
+          ${m.findings.dataPoints ? m.findings.dataPoints.map(dp => `<div class="chat-datapoint">• ${escapeHtml(dp)}</div>`).join('') : ''}
+        </div>` : ''}
+        ${m.recommendations ? `<div class="chat-recommendations"><span class="chat-rec-label">Рекомендация:</span> ${escapeHtml(m.recommendations)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  msgs.scrollTop = msgs.scrollHeight;
+  
+  const streamingEl = msgs.querySelector('.streaming-text');
+  if (streamingEl) typeMessage(streamingEl, backendId, a);
+}
+
+function typeMessage(el, backendId, a) {
+  const fullText = agentChats[backendId].find(m => m.streaming)?.text || '';
+  if (!fullText) { 
+    el.classList.remove('streaming-text'); 
+    return; 
+  }
+  el.textContent = '';
+  let idx = 0;
+  function typeChar() {
+    if (idx < fullText.length) {
+      el.textContent += fullText[idx];
+      idx++;
+      const msgs = document.getElementById('agentChatMessages_' + backendId);
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      const delay = fullText[idx - 1] === '\n' ? 50 : Math.random() * 20 + 10;
+      setTimeout(typeChar, delay);
+    } else {
+      el.classList.remove('streaming-text');
+      const lastMsg = agentChats[backendId][agentChats[backendId].length - 1];
+      if (lastMsg) {
+        lastMsg.streaming = false;
+        lastMsg.findings = lastMsg._findings;
+        lastMsg.recommendations = lastMsg._recommendations;
+        delete lastMsg._findings;
+        delete lastMsg._recommendations;
+        renderAgentChat(backendId, a);
+      }
+    }
+  }
+  typeChar();
 }
 
 // ===== ROI, FORECAST, CUSTOMER HEALTH, MARKETPLACE, KNOWLEDGE, POLICIES, USERS, GRAPH =====
